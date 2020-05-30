@@ -2,7 +2,7 @@ import Foundation
 import AVFoundation
 
 @objc(QRScanner)
-class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
+class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate, AVCapturePhotoCaptureDelegate {
     
     class CameraView: UIView {
         var videoPreviewLayer:AVCaptureVideoPreviewLayer?
@@ -53,6 +53,8 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
     var captureSession:AVCaptureSession?
     var captureVideoPreviewLayer:AVCaptureVideoPreviewLayer?
     var metaOutput: AVCaptureMetadataOutput?
+    var photoOutput: AVCapturePhotoOutput?
+    var qrCode: String?
 
     var currentCamera: Int = 0;
     var frontCamera: AVCaptureDevice?
@@ -152,6 +154,8 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
                 captureSession!.addInput(input)
                 metaOutput = AVCaptureMetadataOutput()
                 captureSession!.addOutput(metaOutput!)
+                photoOutput = AVCapturePhotoOutput()
+                captureSession?.addOutput(photoOutput!)
                 metaOutput!.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
                 metaOutput!.metadataObjectTypes = [AVMetadataObject.ObjectType.qr]
                 captureVideoPreviewLayer = AVCaptureVideoPreviewLayer(session: captureSession!)
@@ -240,10 +244,22 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
         let found = metadataObjects[0] as! AVMetadataMachineReadableCodeObject
         if found.type == AVMetadataObject.ObjectType.qr && found.stringValue != nil {
             scanning = false
-            let pluginResult = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: found.stringValue)
-            commandDelegate!.send(pluginResult, callbackId: nextScanningCommand?.callbackId!)
-            nextScanningCommand = nil
+            qrCode = found.stringValue
+            let settings = AVCapturePhotoSettings()
+            photoOutput?.capturePhoto(with: settings, delegate: self)
         }
+    }
+    
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?){
+        let data = photo.fileDataRepresentation()
+        let base64 = data?.base64EncodedString()
+        let results = [
+            "qr": qrCode,
+            "image": base64
+        ]
+        let pluginResult = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: results)
+        commandDelegate!.send(pluginResult, callbackId: nextScanningCommand?.callbackId!)
+        nextScanningCommand = nil
     }
 
     @objc func pageDidLoad() {
@@ -489,3 +505,4 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
         }
     }
 }
+
