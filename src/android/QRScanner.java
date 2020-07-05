@@ -1,9 +1,15 @@
 package com.bitpay.cordova.qrscanner;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.util.Base64;
+import java.io.ByteArrayOutputStream;
+
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.FeatureInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.hardware.camera2.CameraAccessException;
 import android.net.Uri;
@@ -479,6 +485,14 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
 
     }
 
+    public String convert(Bitmap bitmap)
+    {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
+
+        return Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT);
+    }
+
     @Override
     public void barcodeResult(BarcodeResult barcodeResult) {
         if (this.nextScanCallback == null) {
@@ -487,7 +501,18 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
 
         if(barcodeResult.getText() != null) {
             scanning = false;
-            this.nextScanCallback.success(barcodeResult.getText());
+            Bitmap bmp = barcodeResult.getBitmap();
+            JSONObject response = new JSONObject();
+            String text = barcodeResult.getText();
+            String b64image = this.convert(bmp);
+
+            try {
+                response.put("qr", text);
+                response.put("image", b64image);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            this.nextScanCallback.success(response);
             this.nextScanCallback = null;
         }
         else {
