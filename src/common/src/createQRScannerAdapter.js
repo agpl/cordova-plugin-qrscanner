@@ -221,6 +221,15 @@ return {
       throw new Error('No callback provided to getStatus method.');
     }
     cordova.exec(doneCallback(callback), null, 'QRScanner', 'getStatus', []);
+  },
+  takePhoto: function(callback) {
+    if (!callback) {
+      throw new Error('No callback provided to scan method.');
+    }
+    var success = function(result) {
+      callback(null, result);
+    };
+    cordova.exec(success, errorCallback(callback), 'QRScanner', 'takePhoto', []);
   }
 };
 };

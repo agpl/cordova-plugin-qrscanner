@@ -376,8 +376,15 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate, AVCapturePh
             self.getStatus(command)
         }
     }
-
-    @objc func enableLight(_ command: CDVInvokedUrlCommand) {
+	
+    @objc func takePhoto(_ command: CDVInvokedUrlCommand) {
+		nextScanningCommand = command
+		qrCode = ""
+		let settings = AVCapturePhotoSettings()
+		photoOutput?.capturePhoto(with: settings, delegate:self)
+	}
+    
+	@objc func enableLight(_ command: CDVInvokedUrlCommand) {
         if(self.prepScanner(command: command)){
             self.configureLight(command: command, state: true)
         }
